@@ -404,9 +404,8 @@ export async function POST(req: Request) {
             ${selectedPlace.phone !== 'Phone not available' ? `Phone: ${selectedPlace.phone}` : ''}
             ${selectedPlace.website !== 'Website not available' ? `Website: ${selectedPlace.website}` : ''}
             ${selectedPlace.accessibility.wheelchair ? 'Wheelchair accessible' : 'Not wheelchair accessible'}
-            
             The route is ${(route.distance / 1000).toFixed(2)} km long and will take approximately ${Math.round(route.duration / 60)} minutes.
-            ${steps.map((step, index) => `${index + 1}. ${step.instruction} (${(step.distance / 1000).toFixed(2)} km)`).join('\n')}`;
+            ${steps.map((step: { instruction: string; distance: number }, index: number) => `${index + 1}. ${step.instruction} (${(step.distance / 1000).toFixed(2)} km)`).join('\n')}`;
 
             return NextResponse.json({ 
               response,

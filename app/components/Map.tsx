@@ -3,32 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet.locatecontrol';
-import 'leaflet.locatecontrol/dist/L.Control.Locate.css';
 import { Location } from '../types/mobility';
-
-// Extend Leaflet types to include locate control
-declare module 'leaflet' {
-  namespace Control {
-    interface LocateOptions {
-      position?: string;
-      strings?: {
-        title?: string;
-        popup?: string;
-        outsideMapBoundsMsg?: string;
-      };
-      locateOptions?: {
-        maxZoom?: number;
-        enableHighAccuracy?: boolean;
-      };
-    }
-
-    class Locate extends Control {
-      constructor(options?: LocateOptions);
-      start(): void;
-    }
-  }
-}
 
 interface MapProps {
   currentLocation: Location;
@@ -38,23 +13,20 @@ interface MapProps {
 
 export default function Map({ currentLocation, onLocationChange, routes }: MapProps) {
   const mapRef = useRef<L.Map | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [markers, setMarkers] = useState<L.Marker[]>([]);
-  const [routeLayers, setRouteLayers] = useState<L.Polyline[]>([]);
   const [userLocation, setUserLocation] = useState<L.LatLng | null>(null);
+  const userMarkerRef = useRef<L.Marker | null>(null);
 
+  // Initialize map and get user location
   useEffect(() => {
-    if (!mapContainerRef.current) return;
-
     // Initialize map if it doesn't exist
     if (!mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current).setView(
-        [currentLocation.lat, currentLocation.lng],
-        13
-      );
+      // Initialize map with default view
+      mapRef.current = L.map('map').setView([0, 0], 1);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
+      // Add tile layer
+      L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> Contributors',
+        maxZoom: 18
       }).addTo(mapRef.current);
 
       // Add click handler
@@ -63,28 +35,32 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
       });
 
       // Start locating
-      mapRef.current.locate({ 
+      mapRef.current.locate({
         setView: true,
         maxZoom: 16,
-        enableHighAccuracy: true
+        enableHighAccuracy: true,
+        timeout: 10000
       });
 
       // Handle location found
       mapRef.current.on('locationfound', (e: L.LocationEvent) => {
-        setUserLocation(e.latlng);
-        onLocationChange(e.latlng.lat, e.latlng.lng);
-        
-        // Add a marker for the user's location
-        L.marker(e.latlng, {
-          icon: L.divIcon({
-            className: 'custom-marker',
-            html: '<div class="marker-content">📍</div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 30]
-          })
-        }).addTo(mapRef.current!)
-          .bindPopup('You are here')
-          .openPopup();
+        const location = e.latlng;
+        setUserLocation(location);
+        onLocationChange(location.lat, location.lng);
+
+        // Update or create user marker
+        if (userMarkerRef.current) {
+          userMarkerRef.current.setLatLng(location);
+        } else {
+          userMarkerRef.current = L.marker(location, {
+            icon: L.divIcon({
+              className: 'custom-marker',
+              html: '<div class="marker-content">📍</div>',
+              iconSize: [30, 30],
+              iconAnchor: [15, 30]
+            })
+          }).addTo(mapRef.current!);
+        }
       });
 
       // Handle location error
@@ -102,35 +78,16 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
     };
   }, []);
 
-  // Update map view when location changes
-  useEffect(() => {
-    if (mapRef.current && userLocation) {
-      mapRef.current.setView(userLocation, 13);
-    }
-  }, [userLocation]);
-
-  // Handle markers and routes
+  // Handle routes
   useEffect(() => {
     if (mapRef.current) {
       const map = mapRef.current;
-      // Clear existing layers
+      // Clear existing route layers
       map.eachLayer((layer: any) => {
-        if (layer instanceof L.Polyline || layer instanceof L.Marker) {
+        if (layer instanceof L.Polyline) {
           map.removeLayer(layer);
         }
       });
-
-      // Add markers for start and end locations
-      if (userLocation) {
-        const startMarker = L.marker(userLocation, {
-          icon: L.divIcon({
-            className: 'custom-marker',
-            html: '<div class="marker-content">📍</div>',
-            iconSize: [30, 30],
-            iconAnchor: [15, 30]
-          })
-        }).addTo(map);
-      }
 
       // Add route if available
       if (routes && routes.length > 0) {
@@ -144,7 +101,7 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
                 throw new Error('Invalid coordinate format');
               }
               // Convert from [lng, lat] to [lat, lng] for Leaflet
-              return [coord[1], coord[0]];
+              return [Number(coord[1]), Number(coord[0])];
             });
 
             // Validate coordinates before creating the route line
@@ -162,7 +119,7 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
 
             // Add end marker
             const endCoord = coordinates[coordinates.length - 1];
-            const endMarker = L.marker(endCoord as L.LatLngExpression, {
+            L.marker(endCoord as L.LatLngExpression, {
               icon: L.divIcon({
                 className: 'custom-marker',
                 html: '<div class="marker-content">🏁</div>',
@@ -181,11 +138,11 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
         }
       }
     }
-  }, [userLocation, routes]);
+  }, [routes]);
 
   return (
     <div className="w-full h-full">
-      <div ref={mapContainerRef} className="w-full h-full" />
+      <div id="map" style={{ width: '100%', height: '100%' }} />
       <style jsx global>{`
         .custom-marker {
           background: none;
