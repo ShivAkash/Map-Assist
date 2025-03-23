@@ -18,56 +18,64 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
 
   // Initialize map and get user location
   useEffect(() => {
-    // Initialize map if it doesn't exist
-    if (!mapRef.current) {
-      // Initialize map with default view
-      mapRef.current = L.map('map').setView([0, 0], 1);
+    // Wait for the next tick to ensure container is rendered
+    setTimeout(() => {
+      // Initialize map if it doesn't exist
+      if (!mapRef.current) {
+        // Initialize map with default view
+        mapRef.current = L.map('map', {
+          center: [0, 0],
+          zoom: 1,
+          zoomControl: true,
+          attributionControl: true
+        });
 
-      // Add tile layer
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18
-      }).addTo(mapRef.current);
+        // Add tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 18
+        }).addTo(mapRef.current);
 
-      // Add click handler
-      mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
-        onLocationChange(e.latlng.lat, e.latlng.lng);
-      });
+        // Add click handler
+        mapRef.current.on('click', (e: L.LeafletMouseEvent) => {
+          onLocationChange(e.latlng.lat, e.latlng.lng);
+        });
 
-      // Start locating
-      mapRef.current.locate({
-        setView: true,
-        maxZoom: 16,
-        enableHighAccuracy: true,
-        timeout: 10000
-      });
+        // Start locating
+        mapRef.current.locate({
+          setView: true,
+          maxZoom: 16,
+          enableHighAccuracy: true,
+          timeout: 10000
+        });
 
-      // Handle location found
-      mapRef.current.on('locationfound', (e: L.LocationEvent) => {
-        const location = e.latlng;
-        setUserLocation(location);
-        onLocationChange(location.lat, location.lng);
+        // Handle location found
+        mapRef.current.on('locationfound', (e: L.LocationEvent) => {
+          const location = e.latlng;
+          setUserLocation(location);
+          onLocationChange(location.lat, location.lng);
 
-        // Update or create user marker
-        if (userMarkerRef.current) {
-          userMarkerRef.current.setLatLng(location);
-        } else {
-          userMarkerRef.current = L.marker(location, {
-            icon: L.divIcon({
-              className: 'custom-marker',
-              html: '<div class="marker-content">📍</div>',
-              iconSize: [30, 30],
-              iconAnchor: [15, 30]
-            })
-          }).addTo(mapRef.current!);
-        }
-      });
+          // Update or create user marker
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng(location);
+          } else {
+            userMarkerRef.current = L.marker(location, {
+              icon: L.divIcon({
+                className: 'custom-marker',
+                html: '<div class="marker-content">📍</div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 30]
+              })
+            }).addTo(mapRef.current!);
+          }
+        });
 
-      // Handle location error
-      mapRef.current.on('locationerror', (e: L.ErrorEvent) => {
-        console.error('Geolocation error:', e.message);
-      });
-    }
+        // Handle location error
+        mapRef.current.on('locationerror', (e: L.ErrorEvent) => {
+          console.error('Geolocation error:', e.message);
+        });
+      }
+    }, 0);
 
     // Cleanup function
     return () => {
@@ -141,6 +149,11 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
   }, [routes]);
 
   return (
-    <div id="map" style={{ width: '100%', height: '100%' }} />
+    <div id="map" style={{ 
+      width: '100%', 
+      height: '100%',
+      position: 'relative',
+      minHeight: '400px'
+    }} />
   );
 } 
