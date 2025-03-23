@@ -24,8 +24,8 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
       mapRef.current = L.map('map').setView([0, 0], 1);
 
       // Add tile layer
-      L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> Contributors',
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         maxZoom: 18
       }).addTo(mapRef.current);
 
@@ -141,19 +141,6 @@ export default function Map({ currentLocation, onLocationChange, routes }: MapPr
   }, [routes]);
 
   return (
-    <div className="w-full h-full">
-      <div id="map" style={{ width: '100%', height: '100%' }} />
-      <style jsx global>{`
-        .custom-marker {
-          background: none;
-          border: none;
-        }
-        .marker-content {
-          font-size: 24px;
-          text-align: center;
-          line-height: 30px;
-        }
-      `}</style>
-    </div>
+    <div id="map" style={{ width: '100%', height: '100%' }} />
   );
 } 
