@@ -32,6 +32,7 @@ export default function Chat({ currentLocation, onMobilityData }: ChatProps) {
     setIsLoading(true);
 
     try {
+      console.log('Sending request with location:', currentLocation);
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -44,27 +45,29 @@ export default function Chat({ currentLocation, onMobilityData }: ChatProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error occurred' }));
-        throw new Error(errorData.error || 'Failed to fetch response');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response');
       }
 
       const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
+      console.log('Received API response:', data);
 
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+      // Update messages with the assistant's response
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: data.response || data.message || 'Sorry, I could not process your request.' 
+      }]);
+
+      // Update mobility data if available
       if (data.mobilityData) {
+        console.log('Updating mobility data:', data.mobilityData);
         onMobilityData(data.mobilityData);
       }
     } catch (error) {
       console.error('Error:', error);
       setMessages(prev => [...prev, { 
         role: 'assistant', 
-        content: error instanceof Error 
-          ? `I encountered an error: ${error.message}. Please try again.`
-          : 'Sorry, I encountered an error. Please try again.'
+        content: 'Sorry, I encountered an error. Please try again.' 
       }]);
     } finally {
       setIsLoading(false);
@@ -74,7 +77,7 @@ export default function Chat({ currentLocation, onMobilityData }: ChatProps) {
   return (
     <div className="flex flex-col h-full bg-gray-900">
       <div className="p-4 border-b border-gray-700">
-        <h2 className="text-lg font-semibold text-white">Mobility Assistant</h2>
+        <h2 className="text-lg font-semibold text-white">Map Assistant</h2>
         <p className="text-sm text-gray-400">Current location: {currentLocation.name}</p>
       </div>
       
